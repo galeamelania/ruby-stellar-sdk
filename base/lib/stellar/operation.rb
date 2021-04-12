@@ -17,16 +17,15 @@ module Stellar
       # @return [Stellar::Operation] the built operation
       def make(attributes = {})
         source_account = attributes[:source_account]
+
         body = Stellar::Operation::Body.new(*attributes[:body])
 
-        op = Stellar::Operation.new(body: body)
-
-        if source_account
-          raise ArgumentError, "Bad :source_account" unless source_account.is_a?(Stellar::KeyPair)
-          op.source_account = source_account.muxed_account
+        Stellar::Operation.new(body: body).tap do |op|
+          if source_account
+            raise ArgumentError, "Bad :source_account" unless source_account.is_a?(Stellar::KeyPair)
+            op.source_account = source_account.muxed_account
+          end
         end
-
-        op
       end
 
       #
@@ -489,6 +488,29 @@ module Stellar
         make(attributes.merge({
           body: [:bump_sequence, op]
         }))
+      end
+
+      def clawback(source_account:, from:, amount:)
+        asset, amount = get_asset_amount(amount)
+
+        if amount == 0
+          raise ArgumentError, "Amount can not be zero"
+        end
+
+        if amount < 0
+          raise ArgumentError, "Negative amount is not allowed"
+        end
+
+        op = ClawbackOp.new(
+          amount: amount,
+          from: from.muxed_account,
+          asset: asset
+        )
+
+        make({
+          source_account: source_account,
+          body: [:clawback, op]
+        })
       end
 
       private

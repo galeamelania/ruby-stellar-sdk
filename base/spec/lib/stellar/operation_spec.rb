@@ -295,4 +295,35 @@ RSpec.describe Stellar::Operation do
       expect { operation.to_xdr(:base64) }.to raise_error(ArgumentError)
     end
   end
+
+  fdescribe ".clawback" do
+    let(:asset) { Stellar::Asset.alphanum4("USD", account) }
+    let(:amount) { 1 }
+    let(:attrs) do
+      {
+        source_account: account,
+        from: Stellar::KeyPair.random,
+        amount: [asset, amount]
+      }
+    end
+    subject(:operation) { described_class.clawback(**attrs) }
+
+    it_behaves_like "XDR serializable"
+
+    context "when amount is zero" do
+      let(:amount) { 0 }
+
+      it "raises an error" do
+        expect { operation }.to raise_error(ArgumentError, "Amount can not be zero")
+      end
+    end
+
+    context "when amount is negative" do
+      let(:amount) { "-100" }
+
+      it "raises an error" do
+        expect { operation }.to raise_error(ArgumentError, "Negative amount is not allowed")
+      end
+    end
+  end
 end
